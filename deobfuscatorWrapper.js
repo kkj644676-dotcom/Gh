@@ -1,7 +1,6 @@
 // deobfuscatorWrapper.js
 const { spawn } = require('child_process');
 
-// Exportamos la ejecución de Python para que index.js la use
 module.exports = function ejecutarPython(inputData) {
     return new Promise((resolve, reject) => {
         // Ejecuta deobfuscator.py
@@ -19,10 +18,18 @@ module.exports = function ejecutarPython(inputData) {
             console.error(`Error en Python: ${data}`); 
         });
         
-        // Cuando Python termine, devuelve el código limpio
         pythonProcess.on('close', (code) => {
-            if (code === 0) resolve(output);
-            else reject(`Python falló con código ${code}`);
+            if (code === 0) {
+                // Devolvemos el objeto que tu index.js espera
+                resolve({
+                    code: output.trim(),
+                    techniques: "Auto-Detected",
+                    status: "Success ✅"
+                });
+            } else {
+                reject(`Python falló con código ${code}`);
+            }
         });
     });
 };
+
