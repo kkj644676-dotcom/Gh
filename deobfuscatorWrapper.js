@@ -1,33 +1,24 @@
-// deobfuscatorWrapper.js
 const { spawn } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
-module.exports = function ejecutarPython(inputData) {
+module.exports = function(code) {
     return new Promise((resolve, reject) => {
-        // Ejecuta deobfuscator.py
-        const pythonProcess = spawn('python3', ['deobfuscator.py', inputData]);
+        const tmpFile = path.join(__dirname, `temp_${Date.now()}.lua`);
+        fs.writeFileSync(tmpFile, code);
+
+        // Usamos el modo --json que ya existe en tu deobfuscator.py
+        const pythonProcess = spawn('python3', ['deobfuscator.py', '--json', tmpFile]);
         
         let output = '';
-
-        // Captura el resultado de Python
-        pythonProcess.stdout.on('data', (data) => { 
-            output += data.toString(); 
-        });
-        
-        // Captura errores si los hay
-        pythonProcess.stderr.on('data', (data) => { 
-            console.error(`Error en Python: ${data}`); 
-        });
+        pythonProcess.stdout.on('data', (data) => output += data.toString());
         
         pythonProcess.on('close', (code) => {
-            if (code === 0) {
-                // Devolvemos el objeto que tu index.js espera
-                resolve({
-                    code: output.trim(),
-                    techniques: "Auto-Detected",
-                    status: "Success ✅"
-                });
-            } else {
-                reject(`Python falló con código ${code}`);
+            if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
+            try {
+                resolve(JSON.parse(output));
+            } catch (e) {
+                reject("Error parsing Python output: " + output);
             }
         });
     });
