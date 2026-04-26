@@ -1,17 +1,17 @@
 const { Client, GatewayIntentBits, EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const fs = require('fs');
-const express = require('express'); // Necesario para Railway
+const express = require('express'); // Cambio: Importar express
 const { createPaste } = require('./pastefy.js');
 const { deobfuscate } = require('./deobfuscator.js');
 
-// --- CONFIGURACIÓN DE SERVIDOR (PARA RAILWAY) ---
+// --- CONFIGURACIÓN DE RED PARA RAILWAY ---
 const app = express();
-const PORT = process.env.PORT || 3030;
+const PORT = process.env.PORT || 3030; // Cambio: Puerto dinámico o 3030
 
-app.get('/', (req, res) => res.send('Bot online 🚀'));
-app.listen(PORT, () => console.log(`Servidor web escuchando en puerto ${PORT}`));
+app.get('/', (req, res) => res.send('Bot Status: Online 🚀'));
+app.listen(PORT, () => console.log(`Servidor activo en puerto ${PORT}`));
 
-// --- CONFIGURACIÓN DEL BOT ---
+// --- BOT DE DISCORD ---
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -20,8 +20,8 @@ const client = new Client({
     ]
 });
 
-// Variables desde el entorno (Configúralas en Railway)
-const TOKEN = process.env.DISCORD_TOKEN;
+// Cambio: Carga de variables desde el panel de Railway
+const TOKEN = process.env.DISCORD_TOKEN; 
 const API_KEY = process.env.PASTEFY_API_KEY;
 
 client.on('messageCreate', async (message) => {
@@ -31,7 +31,7 @@ client.on('messageCreate', async (message) => {
     let code = "";
 
     try {
-        // ── Obtener el código: adjunto o texto inline ──
+        // Obtener código
         if (message.attachments.size > 0) {
             const file = message.attachments.first();
             const res = await fetch(file.url);
@@ -42,40 +42,36 @@ client.on('messageCreate', async (message) => {
 
         if (!code) return;
 
-        // ── Ejecutar el deobfuscator ──
-        const result = await deobfuscate(code);
+        // Ejecutar deobfuscator (Llama a tu función de deobfuscator.js)
+        const result = await deobfuscate(code); 
         const timeTaken = ((Date.now() - startTime) / 1000).toFixed(3);
 
-        // ── Guardar resultado y subir a Pastefy ──
-        const fileName = 'code.txt';
-        fs.writeFileSync(fileName, result.code);
+        // Guardar y subir a Pastefy
+        fs.writeFileSync('code.txt', result.code);
         const rawUrl = await createPaste(result.code, API_KEY);
 
-        // ── Preview: primeras 3 líneas del reporte ──
         const preview = result.code.split('\n').slice(0, 3).join('\n') + "\n...";
 
-        // ── EMBED VERDE ──
         const greenEmbed = new EmbedBuilder()
             .setColor('#00FF00')
-            .setTitle('Dump Successfully')
+            .setTitle('dump suseffely')
             .setDescription(
-                `**Time:**\n${timeTaken}s\n\n**Techniques:**\n${result.techniques}` +
-                `\n\n**Status:**\n${result.status}\n\n\`\`\`js\n${preview}\n\`\`\``
+                `**time**\n${timeTaken}s\n\n**tecniquinas**\n${result.techniques}` +
+                `\n\n**status**\n${result.status}\n\n\`\`\`js\n${preview}\n\`\`\``
             );
 
-        // ── EMBED GRIS ──
         const grayEmbed = new EmbedBuilder()
             .setColor('#808080')
-            .setDescription(`\n\n[Open Link](${rawUrl})`);
+            .setDescription(`\n\n[open link](${rawUrl})`);
 
         await message.reply({
             embeds: [greenEmbed, grayEmbed],
-            files: [new AttachmentBuilder(`./${fileName}`)]
+            files: [new AttachmentBuilder('./code.txt')]
         });
 
     } catch (error) {
-        console.error("Error al procesar:", error);
-        message.reply("Ocurrió un error al procesar el código.");
+        console.error("Error en el proceso:", error);
+        message.reply("Ocurrió un error procesando el deobfuscate.");
     }
 });
 
