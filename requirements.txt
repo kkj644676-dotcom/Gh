@@ -1,0 +1,6 @@
+# Dependencias comunes para scripts de deobfuscación en Python
+requests>=2.31.0
+jsbeautifier>=1.14.11
+esprima>=4.0.1
+
+
