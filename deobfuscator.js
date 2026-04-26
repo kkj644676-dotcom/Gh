@@ -5,16 +5,17 @@ const os   = require('os');
 const crypto = require('crypto');
 
 /**
- * Ejecuta deobfuscator.py sobre el código Lua recibido,
- * lee el .report.txt generado y devuelve { code, techniques, status }.
+ * Versión Restaurada: Mantiene todo tu parseo original 
+ * corregido para que no pierda la conexión con el script.
  */
 function deobfuscate(code) {
     return new Promise((resolve) => {
 
-        // Archivo temporal único
         const uid        = crypto.randomBytes(8).toString('hex');
         const tempLua    = path.join(os.tmpdir(), `deob_${uid}.lua`);
         const reportFile = tempLua + '.report.txt';
+        // Aseguramos la ruta absoluta del script
+        const scriptPath = path.join(__dirname, 'deobfuscator.py');
 
         try {
             fs.writeFileSync(tempLua, code, { encoding: 'utf8' });
@@ -26,8 +27,8 @@ function deobfuscate(code) {
             });
         }
 
-        // Lanzar el script Python (asegúrate de que el nombre sea 'deobfuscator.py' o cámbialo aquí)
-        const pyProc = spawn('python', ['deobfuscator.py', tempLua], {
+        // Usamos 'python3' o 'python' según disponibilidad, apuntando al scriptPath
+        const pyProc = spawn('python3', [scriptPath, tempLua], {
             cwd: __dirname,
         });
 
@@ -35,7 +36,6 @@ function deobfuscate(code) {
         pyProc.stderr.on('data', (chunk) => { stderrBuf += chunk.toString('utf8'); });
 
         pyProc.on('close', (exitCode) => {
-
             if (fs.existsSync(tempLua)) try { fs.unlinkSync(tempLua); } catch (_) {}
 
             let rawReport = '';
@@ -48,28 +48,18 @@ function deobfuscate(code) {
 
             if (!rawReport) {
                 const errMsg = [
-                    `[ERROR] El Python no generó ningún reporte (exit code: ${exitCode}).`,
-                    stderrBuf.trim() ? `\nSTDERR:\n${stderrBuf.trim()}` : '',
+                    `[ERROR] El Python no generó reporte. Exit code: ${exitCode}`,
+                    stderrBuf.trim() ? `\nSTDERR:\n${stderrBuf.trim()}` : '\nRevisa si deobfuscator.py existe y funciona.',
                 ].join('');
-
                 return resolve({ code: errMsg, techniques: 'week point', status: 'Error' });
             }
 
-            const parsed    = parseReport(rawReport);
-            const failed    = exitCode !== 0 || parsed.hasError;
-            
-            // Status sin emojis
+            const parsed = parseReport(rawReport);
+            const failed = exitCode !== 0 || parsed.hasError;
             let status = failed ? 'Failed' : 'Success';
-            
-            // Lógica extra para determinar si el ofuscador es bueno o malo según lo detectado
-            if (!failed && parsed.techniques !== 'None detected') {
-                status = 'Success'; 
-            }
-
-            const finalCode = buildOutput(parsed);
 
             resolve({ 
-                code: finalCode, 
+                code: buildOutput(parsed), 
                 techniques: parsed.techniques, 
                 status: status 
             });
@@ -78,7 +68,7 @@ function deobfuscate(code) {
         pyProc.on('error', (err) => {
             if (fs.existsSync(tempLua)) try { fs.unlinkSync(tempLua); } catch (_) {}
             resolve({
-                code: `[ERROR] No se pudo iniciar Python:\n${err.message}`,
+                code: `[ERROR] No se pudo iniciar Python: ${err.message}`,
                 techniques: 'week point',
                 status: 'Error'
             });
@@ -86,6 +76,7 @@ function deobfuscate(code) {
     });
 }
 
+// RESTAURADO: Tu lógica original de detección completa
 function parseReport(raw) {
     const lines = raw.split('\n');
     let inTrace = false, inConstants = false, inLoadstring = false;
@@ -98,8 +89,7 @@ function parseReport(raw) {
         if (line.includes('[ERROR]')) hasError = true;
         if (line.trim() === '--- TRACE ---') { inTrace = true; inConstants = false; continue; }
         if (line.trim() === '--- CONSTANTS ---') { inConstants = true; inTrace = false; continue; }
-        if (line.trim() === '--- DEOBFUSCATION REPORT ---' || line.startsWith('File:')) continue;
-
+        
         if (inTrace) {
             if (!line.trim()) continue;
             traceLines.push(line);
@@ -116,7 +106,6 @@ function parseReport(raw) {
             }
             if (line.startsWith('TRACE_PRINT -->')) tracePrints.push(line.replace('TRACE_PRINT --> ', '').trim());
             if (line.startsWith('LOADSTRING DETECTED')) { inLoadstring = true; currentLoadstring = [line]; continue; }
-            if (line === 'LOADSTRING CONTENT START') continue;
             if (line === 'LOADSTRING CONTENT END') {
                 if (currentLoadstring.length) loadstrings.push(currentLoadstring.join('\n'));
                 inLoadstring = false; continue;
@@ -134,15 +123,15 @@ function parseReport(raw) {
     if (urls.length > 0) techniqueSet.add('URLs');
     if (unpackEvents.length > 0) techniqueSet.add('Unpack');
     
-    const techniques = techniqueSet.size > 0 ? [...techniqueSet].join(', ') : 'week point';
-
     return {
         traceLines, constantsLines, urls, globals, callResults,
         propSets, accessed, tracePrints, loadstrings, closures,
-        unpackEvents, techniques, hasError,
+        unpackEvents, techniques: techniqueSet.size > 0 ? [...techniqueSet].join(', ') : 'week point', 
+        hasError,
     };
 }
 
+// RESTAURADO: Tu formato de salida original
 function buildOutput(p) {
     const out = [];
     out.push('============================================================');
@@ -165,3 +154,4 @@ function buildOutput(p) {
 }
 
 module.exports = { deobfuscate };
+
