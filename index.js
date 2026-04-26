@@ -1,12 +1,12 @@
- const { Client, GatewayIntentBits, EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const fs = require('fs');
-const express = require('express'); // Cambio: Importar express
+const express = require('express'); 
 const { createPaste } = require('./pastefy.js');
-const { deobfuscate } = require('./deobfuscator.js');
+const deobfuscate = require('./deobfuscatorWrapper.js'); // Único cambio: Nombre del archivo correcto
 
 // --- CONFIGURACIÓN DE RED PARA RAILWAY ---
 const app = express();
-const PORT = process.env.PORT || 3030; // Cambio: Puerto dinámico o 3030
+const PORT = process.env.PORT || 3030; 
 
 app.get('/', (req, res) => res.send('Bot Status: Online 🚀'));
 app.listen(PORT, () => console.log(`Servidor activo en puerto ${PORT}`));
@@ -20,7 +20,7 @@ const client = new Client({
     ]
 });
 
-// Cambio: Carga de variables desde el panel de Railway
+// Carga de variables desde el panel de Railway
 const TOKEN = process.env.DISCORD_TOKEN; 
 const API_KEY = process.env.PASTEFY_API_KEY;
 
@@ -42,7 +42,7 @@ client.on('messageCreate', async (message) => {
 
         if (!code) return;
 
-        // Ejecutar deobfuscator (Llama a tu función de deobfuscator.js)
+        // Ejecutar deobfuscator (Llama a tu wrapper de Python)
         const result = await deobfuscate(code); 
         const timeTaken = ((Date.now() - startTime) / 1000).toFixed(3);
 
