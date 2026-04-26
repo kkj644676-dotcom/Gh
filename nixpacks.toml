@@ -1,8 +1,9 @@
 [phases.setup]
-nixPkgs = ["nodePackages.nodejs", "python311"]
+nixPkgs = ["nodePackages.npm", "python311", "lua51"]
 
 [phases.install]
-cmds = ["npm install"]
+cmds = ["npm install", "pip install -r requirements.txt"]
 
 [start]
 cmd = "node index.js"
+
