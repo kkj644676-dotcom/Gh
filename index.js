@@ -2,16 +2,14 @@ const { Client, GatewayIntentBits, EmbedBuilder, AttachmentBuilder } = require('
 const fs = require('fs');
 const express = require('express'); 
 const { createPaste } = require('./pastefy.js');
-const deobfuscate = require('./deobfuscatorWrapper.js'); // Único cambio: Nombre del archivo correcto
+const deobfuscate = require('./deobfuscatorWrapper.js');
 
-// --- CONFIGURACIÓN DE RED PARA RAILWAY ---
 const app = express();
 const PORT = process.env.PORT || 3030; 
 
 app.get('/', (req, res) => res.send('Bot Status: Online 🚀'));
 app.listen(PORT, () => console.log(`Servidor activo en puerto ${PORT}`));
 
-// --- BOT DE DISCORD ---
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -20,7 +18,6 @@ const client = new Client({
     ]
 });
 
-// Carga de variables desde el panel de Railway
 const TOKEN = process.env.DISCORD_TOKEN; 
 const API_KEY = process.env.PASTEFY_API_KEY;
 
@@ -31,7 +28,6 @@ client.on('messageCreate', async (message) => {
     let code = "";
 
     try {
-        // Obtener código
         if (message.attachments.size > 0) {
             const file = message.attachments.first();
             const res = await fetch(file.url);
@@ -42,11 +38,10 @@ client.on('messageCreate', async (message) => {
 
         if (!code) return;
 
-        // Ejecutar deobfuscator (Llama a tu wrapper de Python)
+        // Llama al wrapper que ejecuta python3 deobfuscator.py --json
         const result = await deobfuscate(code); 
         const timeTaken = ((Date.now() - startTime) / 1000).toFixed(3);
 
-        // Guardar y subir a Pastefy
         fs.writeFileSync('code.txt', result.code);
         const rawUrl = await createPaste(result.code, API_KEY);
 
@@ -70,7 +65,7 @@ client.on('messageCreate', async (message) => {
         });
 
     } catch (error) {
-        console.error("Error en el proceso:", error);
+        console.error("Error:", error);
         message.reply("Ocurrió un error procesando el deobfuscate.");
     }
 });
